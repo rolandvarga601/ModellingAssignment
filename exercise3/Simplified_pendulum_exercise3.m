@@ -68,8 +68,8 @@ deq_3 = diff(dL_dqdot, t) - dL_dq ;
 deqs = struct('th1', deq_1, 'th2', deq_2, 'q', deq_3); 
 var = [th1;th2;q];
 
-F_Ext=50*cos(2*t);
-% F_Ext=0;
+F_Ext=80*cos(t);
+%F_Ext=0;
 leqs = [deqs.th1 == 0; deqs.th2 == 0; deqs.q == F_Ext];
 
 [eqs,vars,m] = reduceDifferentialOrder(leqs,var);
@@ -114,38 +114,57 @@ te=0;
 % [tt, x_nl2] = ode45(FF, timecut, x_0, opts);
 % x_nl=[x_nl1;x_nl2]; 
 
-
-timecut=time;
-while timecut(1)~=time(end)
+resolution = 10;
+time = 0:0.01/resolution:10;
+timecut=time(1:2);
+while timecut(1)~=time(end-resolution)
     
-[tt, x_nl1,te,ye,ie] = ode45(FF, timecut, x_0, opts);
-ye = ye(end,:);
-switch ie(end) 
-    
-    case 1
-        ye(4)=-ye(4)*res;
-    case 2
-        ye(5)=-ye(5)*res;
-    case 3
-        ye(4)=-ye(4);
-        ye(5)=-ye(5);
-end
-% Set new initial conditions
-x_0 = ye; 
-% timecut = linspace(te, 60, 10000/(2*te));
-timeindex = find(time>te(end),1);
+    [tt, x_nl1,te,ye,ie] = ode45(FF, timecut, x_0, opts);
 
-timecut = time(timeindex:end);
-if counter==0
-    x_nl=x_nl1;
+    if (~isempty(ye))
+        ye = ye(end,:);
+        switch ie(end) 
+
+            case 1
+                ye(4)=-ye(4)*res;
+            case 2
+                ye(5)=-ye(5)*res;
+            case 3
+    %             ye(4)=-ye(4);
+    %             ye(5)=-ye(5);
+                dum=ye(5);
+                ye(5)=(2*m_1*ye(4)+(m_2-m_1)*ye(5))/(m_2+m_1);
+                ye(4)=dum+ye(5)-ye(4);
+        end
+
+        % Set new initial conditions
+        x_0 = ye; 
+        % timecut = linspace(te, 60, 10000/(2*te));
+        timeindex = find(time>te(end),1);
     else
-    x_nl=[x_nl;x_nl1];    
+        % Set new initial conditions
+        x_0 = x_nl1(end,:); 
+        % timecut = linspace(te, 60, 10000/(2*te));
+        timeindex = find(time>tt(end),1);
+    end
+
+    if (timeindex+resolution >= numel(time))
+         break;
+    end
+    timecut = time(timeindex:timeindex+resolution);
+
+    if counter==0
+        x_nl=x_nl1;
+    else
+        x_nl=[x_nl;x_nl1];    
+    end
+
+    counter=counter+1;
 end
-counter=counter+1;
-end
 
 
-
+x_nl = resample(x_nl,1,10);
+time = 0:0.01:10;
 
 
 
@@ -199,7 +218,7 @@ for i = 1 : numel(time)
     plot(X2_nl(i), Y2_nl(i), 'o', 'MarkerFaceColor', 'k', 'MarkerEdgeColor', 'k', 'MarkerSize', 4 * m_2);
     axis([-20, 20, -15, 15]);
     h = draw_spring_2D([X1_nl(i); Y1_nl(i)], [X2_nl(i); Y2_nl(i)], 10, 0.5);
-    drawnow
+    drawnow %limitrate
 end
 %%
 function h = draw_spring_2D(A, B, number_of_coils, y_amplitude)    
@@ -225,10 +244,12 @@ function h = draw_spring_2D(A, B, number_of_coils, y_amplitude)
     h = plot([A(1), offset_A(1) + rotated_coil_positions(1,:), B(1)], ...
          [A(2), offset_A(2) + rotated_coil_positions(2,:), B(2)], 'k');
 end
+
+
 function [value,isterminal,direction] = myEventsFcn(t,y)
 value = [y(1)+pi/2;y(2)-pi/2;abs(y(1)-y(2))-2*asin(3/(2*5))];
 isterminal = [1;1;1];
-direction = [0;0;0];
+direction = [-1;1;-1];
 
 % value = [y(1)+pi/2;y(2)-pi/2];
 % isterminal = [1;1];
