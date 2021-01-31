@@ -32,7 +32,7 @@ y2 = -L1 * cos(th2);
 %     m_3/2 * ((diff(x3, t))^2 + (diff(y3, t))^2);
 T = M/2 * (diff(q,t))^2 + m_1/2 * ((diff(x1, t))^2 + (diff(y1, t))^2) +...
     m_2/2 * ((diff(x2, t))^2 + (diff(y2, t))^2);
-k = 30;
+k = 2;
 % V = m_1 * g * y1 + m_2 * g * y2 +  m_3 * g * y3 +...
 %     1/2 * k * (sqrt((x2 - x1)^2 + (y2 - y1)^2) - d_0)^2;
 V = m_1 * g * y1 + m_2 * g * y2 +...
@@ -68,7 +68,9 @@ deq_3 = diff(dL_dqdot, t) - dL_dq ;
 deqs = struct('th1', deq_1, 'th2', deq_2, 'q', deq_3); 
 var = [th1;th2;q];
 
-leqs = [deqs.th1 == 0; deqs.th2 == 0; deqs.q == 0];
+F_Ext=50*cos(t);
+
+leqs = [deqs.th1 == 0; deqs.th2 == 0; deqs.q == F_Ext];
 
 [eqs,vars,m] = reduceDifferentialOrder(leqs,var);
 
@@ -82,8 +84,43 @@ FF = odeFunction(ForceMatrix, vars);
 time = linspace(0, 60, 10000);
 % initial conditions [th1, th2, q, th1dot, th2dot, qdot]
 x_0 = [-pi/3 pi/3 0 0 0 0]; 
-opts=odeset('Mass', MM, 'Stats','on');
-[~, x_nl] = ode45(FF, time, x_0, opts);
+res =0.9;
+opts=odeset('Mass', MM, 'Stats','on','Events',@myEventsFcn);
+x_nl = 0;
+counter=0;
+te=0;
+while te<time(end)
+    
+[~, x_nl1,te,ye,ie] = ode45(FF, time, x_0, opts);
+switch ie 
+    
+    case 1
+        ye(4)=-ye(4)*res;
+    case 2
+        ye(5)=-ye(5)*res;
+    case 3
+        ye(4)=-ye(4);
+        ye(5)=-ye(5);
+end
+% Set new initial conditions
+x_0 = ye; 
+% time = linspace(te, 60, 10000/(2*te));
+timeindex = find(t==te);
+
+time = time(timeindex:end);
+if counter==0
+    x_nl=x_nl1;
+    else
+    x_nl=[x_nl;x_nl1];    
+end
+counter=counter+1;
+end
+
+
+
+
+
+
 % Calculate positions as function of generalized coordinates
 X1_nl = x_nl(:, 3) + L1 * sin(x_nl(:, 1));
 Y1_nl = -L1 * cos(x_nl(:, 1));
@@ -94,7 +131,7 @@ Q_dot_nl = x_nl(:,6);
 
 %% Check Mechanical Power Loss=0 in no losses case 
 
-for i=1:10000
+for i=1:size(X2_nl,1)
 
 X1_dot_nl(i,1)=L1*cos(x_nl(i,1))*x_nl(i,4) + x_nl(i,6);
 Y1_dot_nl(i,1)=L1*sin(x_nl(i,1))*x_nl(i,4);
@@ -136,6 +173,7 @@ for i = 1 : numel(time)
     h = draw_spring_2D([X1_nl(i); Y1_nl(i)], [X2_nl(i); Y2_nl(i)], 10, 0.5);
     drawnow
 end
+%%
 function h = draw_spring_2D(A, B, number_of_coils, y_amplitude)    
     persistent t
     
@@ -159,4 +197,12 @@ function h = draw_spring_2D(A, B, number_of_coils, y_amplitude)
     h = plot([A(1), offset_A(1) + rotated_coil_positions(1,:), B(1)], ...
          [A(2), offset_A(2) + rotated_coil_positions(2,:), B(2)], 'k');
 end
+function [value,isterminal,direction] = myEventsFcn(t,y)
+value = [y(1)+pi/2;y(2)-pi/2;abs(y(1)-y(2))-2*asin(3/(2*5))];
+isterminal = [1;1;1];
+direction = [0;0;0];
 
+% value = [y(1)+pi/2;y(2)-pi/2];
+% isterminal = [1;1];
+% direction = [0;0];
+end
