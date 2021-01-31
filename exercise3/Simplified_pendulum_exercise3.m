@@ -1,5 +1,5 @@
 % Simulation of coupled pendulum by Lagrangian mechanics
-close all; clear; clc
+close all; clear all; clc
 % generalized coordinates
 syms t dum_
 th1 = str2sym('th1(t)');
@@ -68,8 +68,8 @@ deq_3 = diff(dL_dqdot, t) - dL_dq ;
 deqs = struct('th1', deq_1, 'th2', deq_2, 'q', deq_3); 
 var = [th1;th2;q];
 
-F_Ext=50*cos(t);
-
+F_Ext=50*cos(2*t);
+% F_Ext=0;
 leqs = [deqs.th1 == 0; deqs.th2 == 0; deqs.q == F_Ext];
 
 [eqs,vars,m] = reduceDifferentialOrder(leqs,var);
@@ -89,10 +89,38 @@ opts=odeset('Mass', MM, 'Stats','on','Events',@myEventsFcn);
 x_nl = 0;
 counter=0;
 te=0;
-while te<time(end)
+% 
+% [tt, x_nl1,te,ye,ie] = ode45(FF, time, x_0, opts);
+% 
+% switch ie(end) 
+%     
+%     case 1
+%         ye(4)=-ye(4)*res;
+%     case 2
+%         ye(5)=-ye(5)*res;
+%     case 3
+%         ye(4)=-ye(4);
+%         ye(5)=-ye(5);
+% end
+% 
+% % Set new initial conditions
+% x_0 = ye; 
+% timeindex = find(t>te(end),1);
+% 
+% timecut = time(timeindex:end);
+% % time = linspace(te, 60, 10000/(2*te));
+% opts=odeset('Mass', MM, 'Stats','on');
+% % [tt, x_nl2,te,ye,ie] = ode45(FF, timecut, x_0, opts);
+% [tt, x_nl2] = ode45(FF, timecut, x_0, opts);
+% x_nl=[x_nl1;x_nl2]; 
+
+
+timecut=time;
+while timecut(1)~=time(end)
     
-[~, x_nl1,te,ye,ie] = ode45(FF, time, x_0, opts);
-switch ie 
+[tt, x_nl1,te,ye,ie] = ode45(FF, timecut, x_0, opts);
+ye = ye(end,:);
+switch ie(end) 
     
     case 1
         ye(4)=-ye(4)*res;
@@ -104,10 +132,10 @@ switch ie
 end
 % Set new initial conditions
 x_0 = ye; 
-% time = linspace(te, 60, 10000/(2*te));
-timeindex = find(t==te);
+% timecut = linspace(te, 60, 10000/(2*te));
+timeindex = find(time>te(end),1);
 
-time = time(timeindex:end);
+timecut = time(timeindex:end);
 if counter==0
     x_nl=x_nl1;
     else
