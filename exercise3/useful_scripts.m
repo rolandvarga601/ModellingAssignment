@@ -11,4 +11,4 @@ simOut = sim('moore_machine','StartTime','9','StopTime','18')
 set_param('moore_machine','LoadInitialState','off','InitialState',...
 'myOperPoint');
 myOperPoint = simOut.myOperPoint
-simOut = sim('moore_machine','StartTime','9','StopTime','18')
+simOut = sim('moore_machine','StartTime','0','StopTime','9')
