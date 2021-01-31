@@ -1,2 +1,8 @@
 
 exercise2/slprj/
+
+*.autosave
+
+*.slxc
+
+exercise2/test2.slx
